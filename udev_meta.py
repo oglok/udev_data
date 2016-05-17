@@ -40,17 +40,13 @@ Example of Metadata information
 '''
 
 def get_metadata():
+
     '''Function that sends a GET to the metadata service and parses the output'''
     r = requests.get('http://169.254.169.254/openstack/latest/meta_data.json')
     metadata = {}
-    tag = ''
-    addr = ''
-
+    
     for item in r.get('devices'):
-        tag = item['tags'][0]
-        addr = item['address']
-        metadata[tag] = addr
-        
+        metadata[item['tags'][0]] = item['address']
 return metadata
 
 def write_udev(metadata):
