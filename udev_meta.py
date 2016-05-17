@@ -1,6 +1,44 @@
 import requests
 import json
 
+'''
+Example of Metadata information
+--------------------------------
+
+{
+  "devices": [
+    {
+        "type": "nic",
+        "bus": "pci",
+        "address": "0000:00:02.0",
+        "mac": "01:22:22:42:22:21",
+        "tags": ["nfvfunc1"]
+    },
+    {
+        "type": "nic",
+        "bus": "pci",
+        "address": "0000:00:03.0",
+        "mac": "01:22:22:42:22:21",
+        "tags": ["nfvfunc2"]
+    },
+    {
+        "type": "disk",
+        "bus": "scsi",
+        "address": "1:0:2:0",
+        "serial": "disk-vol-2352423",
+        "tags": ["oracledb"]
+    },
+    {
+        "type": "disk",
+        "bus": "pci",
+        "address": "0000:00:07.0",
+        "serial": "disk-vol-24235252",
+        "tags": ["squidcache"]
+    }
+  ]
+}
+'''
+
 def get_metadata():
     '''Function that sends a GET to the metadata service and parses the output'''
     r = requests.get('http://169.254.169.254/openstack/latest/meta_data.json')
@@ -8,13 +46,12 @@ def get_metadata():
     tag = ''
     addr = ''
 
-    for item in r:
-        if 'tags' in item:
-            tag = r['tags']
-        elif 'Address' in item:
-            addr = r['Address']
+    for item in r.get('devices'):
+        tag = item['tags'][0]
+        addr = item['address']
         metadata[tag] = addr
-    return metadata
+        
+return metadata
 
 def write_udev(metadata):
     '''Function that will write udev rules that look like:
