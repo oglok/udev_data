@@ -1,0 +1,12 @@
+[Unit]
+Description=Udev rules based on metadata information
+DefaultDependencies=no
+Before=systemd-udevd.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/bin/python /usr/lib/systemd/udev_meta.py
+
+[Install]
+WantedBy=sysinit.target
