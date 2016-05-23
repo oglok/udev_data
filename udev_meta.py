@@ -1,5 +1,7 @@
 import requests
 import json
+import os, sys
+import subprocess
 
 '''
 Example of Metadata information
@@ -39,7 +41,7 @@ Example of Metadata information
 }
 '''
 
-def get_metadata():
+def get_metadata_zeroconf():
 
     '''Function that sends a GET to the metadata service and parses the output'''
     try:
@@ -52,6 +54,18 @@ def get_metadata():
         return metadata
     except requests.exceptions.RequestException as e:
         return "Error: {}".format(e)
+
+def get_metadata_config_drive():
+    path = "/mnt/config"
+    if os.path.isdir(path) is not True:
+        os.mkdir(path, 0755)
+    os.system("mount /dev/disk/by-label/config-2 /mnt/config")
+    with open('/mnt/config/openstack/latest/meta_data.json', 'r') as fp:
+        r = json.load(fp)
+    metadata = {}
+    for item in r.get('devices'):
+        metadata[item['tags'][0]] = item['address']
+    return metadata
 
 def write_udev(metadata):
     '''Function that will write udev rules that look like:
@@ -68,7 +82,9 @@ def write_udev(metadata):
     target.close()
 
 def main():
-    a = get_metadata()
+
+    a = get_metadata_config_drive()
+    #a = get_metadata_zeroconf()
     write_udev(a)
 
 if __name__ == '__main__':
