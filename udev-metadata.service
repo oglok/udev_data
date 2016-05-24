@@ -1,7 +1,7 @@
 [Unit]
 Description=Udev rules based on metadata information
 DefaultDependencies=no
-Before=systemd-udevd.service
+Before=network.service
 
 [Service]
 Type=oneshot

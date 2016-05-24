@@ -1,7 +1,8 @@
 import requests
 import json
 import os, sys
-import subprocess
+import shutil
+import fileinput
 
 '''
 Example of Metadata information
@@ -42,13 +43,11 @@ Example of Metadata information
 '''
 
 def get_metadata_zeroconf():
-
     '''Function that sends a GET to the metadata service and parses the output'''
     try:
         response = requests.get('http://169.254.169.254/openstack/latest/meta_data.json')
         r = json.loads(response.text)
         metadata = {}
-
         for item in r.get('devices'):
             metadata[item['tags'][0]] = item['address']
         return metadata
@@ -56,6 +55,7 @@ def get_metadata_zeroconf():
         return "Error: {}".format(e)
 
 def get_metadata_config_drive():
+    '''Function that mounts config drive with metadata info'''
     path = "/mnt/config"
     if os.path.isdir(path) is not True:
         os.mkdir(path, 0755)
@@ -74,18 +74,29 @@ def write_udev(metadata):
     ACTION=="add", SUBSYSTEM=="net", KERNELS=="0000:00:0b.0", NAME="eth1"
     ACTION=="add", SUBSYSTEM=="net", KERNELS=="0000:00:0c.0", NAME="xe0"
     ACTION=="add", SUBSYSTEM=="net", KERNELS=="0000:00:0d.0", NAME="xe1" '''
-
     target = open('/etc/udev/rules.d/70-persistent-net.rules', 'w')
     for i in metadata:
         target.write('ACTION=="add", SUBSYSTEM=="net", KERNELS=="'+ metadata[i] + '", NAME="' + i + '"')
         target.write("\n")
     target.close()
 
+def apply_udev(metadata):
+    os.system("udevadm control --reload")
+    os.system("udevadm trigger --attr-match=subsystem=net")
+    os.system("systemctl restart systemd-udev-trigger.service")
+    shutil.move("/etc/sysconfig/network-scripts/ifcfg-eth0", "/etc/sysconfig/network-scripts/ifcfg-"+metadata.keys()[-1])
+
+    for line in fileinput.input("/etc/sysconfig/network-scripts/ifcfg-"+metadata.keys()[-1], inplace=1):
+        if "eth0" in line:
+            line = line.replace("eth0", metadata.keys()[-1])
+        sys.stdout.write(line)
+
 def main():
 
     a = get_metadata_config_drive()
     #a = get_metadata_zeroconf()
     write_udev(a)
+    apply_udev(a)
 
 if __name__ == '__main__':
     sys.exit(main())
