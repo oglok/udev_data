@@ -5,7 +5,7 @@ order to create a consistent naming convention and ordering of NIC interfaces.
 
 The following link gets you to the spec:
 
-		[link] https://specs.openstack.org/openstack/nova-specs/specs/mitaka/approved/virt-device-role-tagging.html
+		https://specs.openstack.org/openstack/nova-specs/specs/mitaka/approved/virt-device-role-tagging.html
 
 Please, take a look at the problem description section which explains the reasoning
 behind this.
