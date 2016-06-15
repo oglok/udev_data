@@ -1,8 +1,26 @@
+#!/usr/bin/python
+
+# Copyright (C) 2016  Ricardo Noriega (ricardonor@gmail.com)
+#
+# This program is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License
+# as published by the Free Software Foundation; either version 2
+# of the License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
 import requests
 import json
 import os, sys
 import shutil
 import fileinput
+import time
 
 '''
 Example of Metadata information
@@ -41,6 +59,7 @@ Example of Metadata information
   ]
 }
 '''
+CONFIG_DRIVE = True
 
 def get_metadata_zeroconf():
     '''Function that sends a GET to the metadata service and parses the output'''
@@ -88,23 +107,34 @@ def write_udev(metadata):
 
 def apply_udev(metadata):
     try:
+        if not CONFIG_DRIVE:
+            os.system("systemctl stop network.service")
         os.system("udevadm control --reload")
         os.system("udevadm trigger --attr-match=subsystem=net")
         os.system("systemctl restart systemd-udev-trigger.service")
-        shutil.move("/etc/sysconfig/network-scripts/ifcfg-eth0", "/etc/sysconfig/network-scripts/ifcfg-"+metadata.keys()[-1])
-        for line in fileinput.input("/etc/sysconfig/network-scripts/ifcfg-"+metadata.keys()[-1], inplace=1):
-            if "eth0" in line:
-                line = line.replace("eth0", metadata.keys()[-1])
-            sys.stdout.write(line)
+        for name,pci in metadata.iteritems():
+            shutil.copy("/etc/sysconfig/network-scripts/ifcfg-eth0", "/etc/sysconfig/network-scripts/ifcfg-"+ name)
+            for line in fileinput.input("/etc/sysconfig/network-scripts/ifcfg-"+ name, inplace=1):
+                if "eth0" in line:
+                    line = line.replace("eth0", name)
+                sys.stdout.write(line)
+        os.remove("/etc/sysconfig/network-scripts/ifcfg-eth0")
+        if not CONFIG_DRIVE:
+            os.system("systemctl start network.service")
     except Exception as e:
         return "ERROR - Apply udev failed: {}".format(e)
 
 def main():
 
-    a = get_metadata_config_drive()
-    #a = get_metadata_zeroconf()
-    write_udev(a)
-    apply_udev(a)
+    if CONFIG_DRIVE:
+        a = get_metadata_config_drive()
+        write_udev(a)
+        apply_udev(a)
+    if not CONFIG_DRIVE:
+        time.sleep(1)
+        a = get_metadata_zeroconf()
+        write_udev(a)
+        apply_udev(a)
 
 if __name__ == '__main__':
     sys.exit(main())
